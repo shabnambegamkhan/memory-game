@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Memory Game</title>
+    <style>
+      /* Style for the entire body */
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-image: url("image/ss6.gif");
+        background-repeat: no-repeat;
+        background-size: cover;
+        background-position: center;
+        font-size: 40px;
+        color: #be0f26;
+      }
+
+      /* Style for the game board container */
+      #gameBoard {
+        display: grid;
+        grid-template-columns: repeat(6, 100px);
+        gap: 20px;
+        padding: 20px;
+        border-radius: 10px;
+      }
+
+      /* Style for each card */
+      .card {
+        width: 100px;
+        height: 100px;
+        background-color: rgb(173, 21, 179);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        border-radius: 20px;
+        border: 4px groove rgb(166, 255, 0);
+        transition: transform 0.3s;
+      }
+
+      /* Hidden image in the card */
+      .card img {
+        width: 100%;
+        height: 100%;
+        border-radius: 10px;
+        display: none;
+      }
+
+      /* Style for the restart button */
+      #restartButton,
+      #muteButton {
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 20px;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      #restartButton {
+        background-color: #13dd0c;
+        color: rgb(17, 14, 14);
+      }
+
+      #restartButton:hover {
+        background-color: #e61258;
+      }
+
+      #muteButton {
+        background-color: #d30c05;
+        color: rgb(5, 1, 4);
+      }
+
+      #muteButton:hover {
+        background-color: #f0cd05;
+      }
+
+      /* Congrats popup styling */
+      #congratsPopup {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        display: none;
+        z-index: 1000;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="timer">Time: 0s</div>
+    <div id="gameBoard"></div>
+    <button id="restartButton">🔃 Restart</button>
+    <button id="muteButton">🔇 Mute/🔊 Unmute</button>
+    <audio id="backgroundMusic" loop>
+      <source src="page.mp3" type="audio/mpeg" />
+    </audio>
+    <div id="congratsPopup">
+      <h2>Congratulations!</h2>
+      <img src="fir.gif" alt="Congratulations">
+      <audio id="firsound" loop>
+          <source src="fireworks.mp3" type="audio/mpeg">
+      </audio>
+      <p>You found all the matches!</p>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const cardArray = [
+          { img: "image/m16.avif" },
+          { img: "image/m17.avif" },
+          { img: "image/m18.gif" },
+          { img: "image/m19.gif" },
+          { img: "image/m21.gif" },
+          { img: "image/m22.gif" },
+          { img: "image/m23.gif" },
+          { img: "image/m24.gif" },
+          { img: "image/m32.gif" },
+          { img: "image/m33.gif" },
+          { img: "image/m34.gif" },
+          { img: "image/m35.gif" },
+        ];
+
+        const gameArray = cardArray.concat(cardArray); // Duplicate the array for pairs
+        const gameBoard = document.querySelector("#gameBoard");
+        const restartButton = document.querySelector("#restartButton");
+        const muteButton = document.querySelector("#muteButton");
+        const backgroundMusic = document.querySelector("#backgroundMusic");
+        const congratsPopup = document.querySelector("#congratsPopup");
+        const timerDisplay = document.querySelector("#timer");
+        let cardsChosen = [];
+        let cardsChosenId = [];
+        let cardsWon = [];
+        let timer;
+        let time = 0;
+
+        function startTimer() {
+          timer = setInterval(() => {
+            time++;
+            timerDisplay.textContent = `Time: ${time}s`;
+          }, 1000);
+        }
+
+        function stopTimer() {
+          clearInterval(timer);
+        }
+
+        function resetTimer() {
+          time = 0;
+          timerDisplay.textContent = `Time: 0s`;
+        }
+
+        function createBoard() {
+          gameArray.sort(() => 0.5 - Math.random());
+          gameBoard.innerHTML = "";
+          gameArray.forEach((card, index) => {
+            const cardElement = document.createElement("div");
+            cardElement.setAttribute("class", "card");
+            cardElement.setAttribute("data-id", index);
+            cardElement.addEventListener("click", flipCard);
+            const cardImage = document.createElement("img");
+            cardImage.setAttribute("src", card.img);
+            cardElement.appendChild(cardImage);
+            gameBoard.appendChild(cardElement);
+          });
+        }
+
+        function flipCard() {
+          const cardId = this.getAttribute("data-id");
+          if (cardsChosenId.includes(cardId) || cardsChosen.length === 2)
+            return;
+          this.querySelector("img").style.display = "block";
+          cardsChosen.push(gameArray[cardId].img);
+          cardsChosenId.push(cardId);
+          if (cardsChosen.length === 2) {
+            setTimeout(checkForMatch, 500);
+          }
+        }
+
+        function checkForMatch() {
+          const cards = document.querySelectorAll(".card");
+          const [optionOneId, optionTwoId] = cardsChosenId;
+          if (
+            cardsChosen[0] === cardsChosen[1] &&
+            optionOneId !== optionTwoId
+          ) {
+            cardsWon.push(cardsChosen);
+            cards[optionOneId].removeEventListener("click", flipCard);
+            cards[optionTwoId].removeEventListener("click", flipCard);
+          } else {
+            cards[optionOneId].querySelector("img").style.display = "none";
+            cards[optionTwoId].querySelector("img").style.display = "none";
+          }
+          cardsChosen = [];
+          cardsChosenId = [];
+          if (cardsWon.length === gameArray.length / 2) {
+            stopTimer();
+            showCongratulations();
+          }
+        }
+
+        function showCongratulations() {
+          congratsPopup.style.display = "block";
+          setTimeout(() => (congratsPopup.style.display = "none"), 5000);
+        }
+
+        function restartGame() {
+          stopTimer();
+          resetTimer();
+          cardsChosen = [];
+          cardsChosenId = [];
+          cardsWon = [];
+          congratsPopup.style.display = "none";
+          createBoard();
+          startTimer();
+        }
+
+        function toggleMute() {
+          if (backgroundMusic.paused) {
+            backgroundMusic.play();
+          } else {
+            backgroundMusic.pause();
+          }
+        }
+
+        restartButton.addEventListener("click", restartGame);
+        muteButton.addEventListener("click", toggleMute);
+
+        backgroundMusic.play();
+        createBoard();
+        startTimer();
+      });
+    </script>
+  </body>
+</html>
